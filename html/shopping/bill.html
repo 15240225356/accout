@@ -1,0 +1,379 @@
+<html lang="zh-cn">
+<head>
+    
+    <meta http-equiv="x-dns-prefetch-control" content="on">
+    <link rel="dns-prefetch" href="http://resjrprd.suning.com">
+    
+    <meta charset="UTF-8">
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+    <meta http-equiv="expires" content="0">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    
+    <meta name="format-detection" content="email=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>账单</title>
+    
+    
+    
+<link href="../../css/main.css?2dc778728ee84bac933a" rel="stylesheet"><script type="text/javascript" src="../../js/app-base.js?007502335822209716"></script></head>
+<body>
+<div id="app">
+    <div class="loading" v-show="isloading"></div>
+    <div v-show="!isloading" style="display:none;">
+        <div class="bigbox">
+            
+            <div class="paymoneyarea" v-if="billState == 1">
+                <p class="p1">本期剩余待还({{repayDate}}为最迟还款日)</p>
+                <template v-if="flag">
+                    <p class="p2">{{repayAmt | amount}}</p>
+                    <p class="p3">无账单</p>
+                </template>
+                <template v-else>
+                    <p class="p2" v-if="!isRepayed" :class="{error:isOverdue}">{{repayAmt | amount}}</p>
+                    <p class="p2 likeicons" v-if="isRepayed"></p>
+                    <p class="p3" v-if="!isRepayed && !isOverdue">剩余最低还款额{{minRepayAmt | amount}}元<s class="gtips" @click="showpopwindow"></s></p>
+                    <p class="p3" v-if="isRepayed">账单已还清</p>
+                    <p class="p3" v-if="!isRepayed && isOverdue">账单已逾期</p>
+                </template>
+            </div>
+            
+            <div class="paymoneyarea" v-if="billState == 0">
+                <p class="p1">未出账单金额({{repayDate}}为账单日)</p>
+                <template v-if="flag">
+                    <p class="p2">{{repayAmt | amount}}</p>
+                    <p class="p3">无账单</p>
+                </template>
+                <template v-else>
+                    <p class="p2">{{repayAmt | amount}}</p>
+                    <p class="p3"></p>
+                </template>
+            </div>
+            
+            <div class="paymoneyarea" v-if="billState == 2">
+                <template v-if="flag">
+                    <p class="p1">{{repayDate}}</p>
+                    <p class="p2">{{repayAmt | amount}}</p>
+                    <p class="p3">无账单</p>
+                </template>
+                <template v-else>
+                    <p class="p1" v-if="config.querys().source == 'idx_overduehis'">{{repayDate.split("月")[0]}}月逾期剩余待还</p>
+                    <p class="p1" v-else>{{repayDate}}</p>
+                    <p class="p2 error" v-if="config.querys().source == 'idx_overduehis'">{{minRepayAmt | amount}}</p>
+                    <p class="p2 c333" v-else>{{repayAmt | amount}}</p>
+                    <p class="p3" v-if="isRepayed">账单已还清</p>
+                    <p class="p3" v-if="!isRepayed && isOverdue">账单已逾期</p>
+                </template>
+            </div>
+            <div class="nodata pt0" v-if="flag">
+                <span class="kongimg"></span>
+                <div class="updatadata">无待还记录</div>
+            </div>
+            <div class="huizong" v-show="!flag">
+                <span>{{ordermonth}}月订单数 {{ordernum}} 笔</span>
+                <em>已还 {{repayedAmt | amount}} 元</em>
+            </div>
+            
+            <div class="paymoneylist mb0 bb100" v-show="!flag">
+                <a v-for="(item,index) in listdata" :href="baseurl+'/account/html/shopping/acct.html?no=' + item.no+'&billflag=' + billFlag" class="celllist">
+                    
+                    <div class="leftlist">
+                        <p class="title">{{item.name}}</p>
+                        <p class="titletip">{{item.remark}}<span class="periodedIcon" v-if="item.userTermFlag == 1">已分期</span></p>
+                    </div>
+                    
+                    <div class="rightlist">
+                        <p class="moeny">{{item.amt | amount}}</p>
+                        <p class="fqnum">{{item.curTerm+"/"+item.totalTerms}}</p>
+                    </div>
+                </a>
+            </div>
+            <div class="dialog" v-if="dialogflag">
+                <div class="dialog_shadow"></div>
+                <div class="dialog_content">
+                    <h3>历史逾期账单</h3>
+                    <p>您的{{months_string}}<a v-if="months?months.length>3:''">等一共{{months?months.length:''}}个月</a>账单已经逾期很久了,逾期金额为<span>{{historyData | amount}}</span>
+                        元,请立即还款,珍惜个人信用,如想查看详情,请至历史逾期待还账单查看。</p>
+                    <div class="dialog_footer">
+                        <span @click="dialogflag=false" class="span close">我知道了</span>
+                        <a href="javascript:void(0);" @click="hisquickrepay" class="span payoff">
+                            <span>立即还款</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="bottomTwoBtn" :class="{'billPeriodBtndShow':Boolean(Number(installment.hasBtn))}">
+                <a href="javascript:void(0)" class="splitBtn" @click="periodBtn">我要分期<i class="hot"></i></a>
+                <a href="javascript:void(0)" class="quickPayBtn" v-if="hasRepay" @click="quickrepay">立即还款</a>
+            </div>
+            <compmodal v-if="flagPop" @close-modal="closeWin" :data="popWindowData"></compmodal>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#app',
+        data: {
+            /***** url *****/
+            baseurl: config.domain,
+            months_string:"",
+            dialogflag:false,
+            isOverdue: true,
+            repayAmt: 0.00,
+            minRepayAmt:0.00,
+            repayDate:'',
+            repayedAmt:0.00,
+            ordernum:0,
+            ordermonth:0,
+            billState:1,
+            isRepayed: true,
+            hasRepay:true,
+            historyData:"0.00",
+            months: [],
+            listdata : [],
+            // ****************弹窗(公用)*****************
+            //弹出框数据
+            popWindowData : {
+                title: '消息提示',
+                msg: '<p style="text-align:center;line-height:50px;">网络异常,请稍后再试...</p>',
+                closeBtn : '知道啦~'
+            },
+            //弹出框初始化显示
+            flagPop: false,
+
+            // ****************当请求到后端数据的状态码异常显示弹窗(公用)*****************
+            popMessage:"",
+
+            /***** 解决vue花括号提前加载 *****/
+            isloading:true,
+
+            /***** 操作标识  *****/
+            billFlag:"",
+
+            /***** 操作标识  *****/
+            flag:false,
+
+            /***** 我要分期 *****/
+            installment: {
+                "msgCode": "hello,boy!",
+                "hasBtn": "0",
+                "msg":"账单分期"
+            },
+			overDueXJ: "" //若当前逾期 不能跳转还款 zxl
+        },
+        methods:{
+            //隐藏弹出框
+            closeWin: function() {
+                this.flagPop = false;
+            },
+            //点击感叹号弹出框
+            showpopwindow : function () {
+                this.popWindowData = {title: "消息提示",closeBtn: "知道啦~"};
+                this.popWindowData.msg = "到期还款日"+this.repayDate+"前归还最低还款额不会影响您的信用记录；"+this.repayDate+"后剩余本金按日计息，日利率为0.1%；";
+                this.flagPop = true;
+            },
+            //历史 当前 历史逾期 还款参数
+            choicebillState: function (obillState,oisOverdue) {
+                if(obillState == 0){
+                    return "NEXT";//未出
+                }else if(obillState == 1){
+                    return "CURRENT";//当前
+                }else if(obillState == 2 && oisOverdue){
+                    return "HISTORY";//历史逾期
+                }else{
+                    return "";
+                }
+            },
+            /***** 立即还款 *****/
+            quickrepay: function () {
+                //当前已逾期
+				if(this.overDueXJ == "1"){
+					this.flagPop = true;
+					this.popWindowData = {title: "消息提示", msg: '<p style="text-align:center;line-height:50px;">您当前有逾期，结清后就可进行还款。</p>',closeBtn: "知道啦~"};
+				}else if(Boolean(Number(this.historyData)) && !this.dialogflag){
+					this.dialogflag = true;
+				}else{
+                    config.repaybtn(this.baseurl+config.urls.repay.goRepay,{
+                        "billType": "shopping",//业务类型
+                        "productType": "",//产品类型
+                        "settleType": "01",//结清方式
+                        "billFlag": this.billFlag,//操作标识
+                        "loanacNo": "",//贷款单号
+                        "ramt": this.repayAmt || 0.00//还款金额
+                    });
+                }
+            },
+            /***** 历史逾期立即还款 *****/
+            hisquickrepay: function () {
+                config.repaybtn(this.baseurl + config.urls.repay.goRepay, {
+                    "billType": "shopping",//业务类型
+                    "settleType": "01",//结清方式
+                    "billFlag": "HISTORY",//操作标识
+                    "ramt": this.historyData || "" //还款金额
+                });
+            },
+            /***** 封装我要分期弹出框  zxl *****/
+            periodAlert : function (msg) {
+                if(this.installment.msgCode != "0006" ){
+                    var that = this;
+                    //3秒自动关闭
+                    this.popWindowData = {msg: msg,smallAlert:true};
+                    this.flagPop = true;
+                    setTimeout(function () {
+                        that.flagPop = false;
+                    },3000);
+                }else{
+                    //状态为 6 7 手工关闭
+                    this.popWindowData = {title: "消息提示", msg: msg,closeBtn: "知道啦~"};
+                    this.flagPop = true;
+                }
+            },
+            /***** 我要分期 zxl *****/
+            periodBtn: function () {
+                if(this.installment.msgCode == "0000"){
+                    //如果校验通过，跳转到分期页面
+                    window.location.href = this.baseurl + '/account/html/shopping/installment.html';
+                }else{
+                    this.periodAlert(this.installment.msg || "数据异常，请稍后再试...");
+                }
+            }
+        },
+        components:{
+            'compmodal':compModal
+        },
+        mounted:function(){
+            var that = this;
+            // 参数获取
+            var dataParams = {
+                token: (config.querys().token ? encodeURIComponent(config.querys().token) : ""),
+                channelType: (config.querys().channelType ? encodeURIComponent(config.querys().channelType) : ""),
+                yearmonth: config.querys().yearmonth || '',
+				source: config.querys().source || '',
+                random: Math.random()
+            };
+            this.$http.get(config.domain + config.urls.bill.shopping.list, {params:dataParams}).then(function(resp){
+                var jsonObj = resp.body;
+                if(jsonObj.code=="0000" && jsonObj.data){
+                    this.isloading = false;
+                    //有数据
+                    var dat = jsonObj.data;
+                    var listdata = dat.order.list || [];
+                    if(listdata.length==0){
+                        // 处理成功的结果 并且修改为真实数据
+                        this.billState = dat.billState;
+                        this.isOverdue = dat.isOverdue;
+                        this.isRepayed = dat.isRepayed;
+                        this.repayAmt = dat.repayAmt || 0.00;
+                        this.minRepayAmt = dat.minRepayAmt || 0.00;
+                        this.repayDate = dat.repayDate;
+                        this.repayedAmt = dat.repayedAmt || 0.00;
+                        this.hasRepay = dat.hasRepay;
+                        this.installment = dat.installment || {};
+                        //无数据
+                        this.flag = true;
+						//当前逾期 不能跳转还款
+						this.overDueXJ = dat.overDueXJ || "";
+                    }else{
+						//当前逾期 不能跳转还款
+						this.overDueXJ = dat.overDueXJ || "";
+                        // 处理成功的结果 并且修改为真实数据
+                        this.billState = dat.billState;
+                        this.isOverdue = dat.isOverdue;
+                        this.isRepayed = dat.isRepayed;
+
+                        this.repayAmt = dat.repayAmt || 0.00;
+                        this.minRepayAmt = dat.minRepayAmt || 0.00;
+                        this.repayDate = dat.repayDate;
+                        this.repayedAmt = dat.repayedAmt || 0.00;
+                        this.hasRepay = dat.hasRepay;
+                        this.ordernum = dat.order.num;
+                        this.ordermonth = dat.order.month;
+                        this.installment = dat.installment || {};
+                        this.listdata = (dat.order && dat.order.list) ? dat.order.list : [];
+                        this.billFlag = this.choicebillState(this.billState,this.isOverdue);//操作标识
+                        // 弹窗数据
+                        this.historyData = dat.historical ? dat.historical.totalAmt : "0.00";
+                        // 弹窗数据
+                        that.months = dat.historical ? dat.historical.months : [];
+                        // 找出重复项以及下标的公用函数
+                        Array.prototype.removeRepeatItem = function () {
+                            var arr1 = [];
+                            var repeatItem  = [];
+                            for (var i = 0; i < this.length; i++) {
+                                var item = this[i];
+                                if (arr1.indexOf(item) == -1) {
+                                    arr1.push(item);
+
+                                }else{
+                                    repeatItem.push({"repeat":item,"index":i})
+                                }
+                            }
+                            return repeatItem
+                        }
+                        if(that.months){
+                            // 当大于等于3个月
+                            if(that.months.length>=3){
+                                var months_new = that.months.slice(0,3);
+                                var months_years = [];
+                                var months_day = [];
+                                for(j = 0,len=months_new.length; j < len; j++) {
+                                    months_years.push(months_new[j].substr(0,5))
+                                    months_day.push(months_new[j].substr(5,3))
+                                }
+                                var repeatItem = months_years.removeRepeatItem()
+                                if(repeatItem.length>=2&&repeatItem != ""){
+                                    that.months_string = months_years[0]+months_day.join('、');
+                                }else if(repeatItem.length = 1&&repeatItem != ""){
+                                    var i = repeatItem[0].index
+                                    months_new[i-1] = months_new[i-1] +"、" +months_day[i]
+                                    months_new.splice(i,1)
+                                    that.months_string =months_new.join('、')
+                                }else{
+                                    that.months_string =months_new.join('、')
+
+                                }
+                            }
+                            // 当等于2个月
+                            if(that.months.length == 2){
+                                if(that.months[0].substr(0,4)==that.months[1].substr(0,4)){
+                                    that.months_string = that.months[0]+"、"+that.months[1].substr(5,3);
+                                }else{
+                                    that.months_string = that.months.join('、')
+                                }
+                            }
+                            // 当等于1个月时
+                            if(that.months.length == 1){
+                                that.months_string = that.months.join('、')
+                            }
+                            //弹窗的月份用顿号分开
+                            // that.months_string = that.months != null ? that.months.join('、') : "";
+                        }
+                    }
+                }else {
+                    this.isloading = false;
+                    this.flagPop = true;
+                    this.popWindowData = {title: "消息提示",closeBtn: "知道啦~"};
+                    this.popWindowData.msg ='<p style="text-align:center;line-height:50px;">'+(jsonObj.msg || '数据异常，请稍后再试...')+'</p>';
+                }
+            },function(err){
+                // 当请求不到后端数据,则会弹窗提示网络异常
+                this.flagPop = true;
+                this.isloading = false;
+            });
+        },
+        updated:function(){
+            if(this.billState == 1){
+                $("title").text("本期账单");
+            }else if(this.billState == 0){
+                $("title").text("未出账单");
+            }else if(this.billState == 2){
+                $("title").text(this.repayDate.split("月")[0]+"月账单");
+            }
+        }
+    })
+</script>
+</body>
+</html>

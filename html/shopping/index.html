@@ -1,0 +1,150 @@
+<!DOCTYPE HTML>
+<html lang="zh-cn">
+<head>
+	
+    <meta http-equiv="x-dns-prefetch-control" content="on">
+    <link rel="dns-prefetch" href="http://resjrprd.suning.com">
+	
+    <meta charset="UTF-8">	 
+    <meta http-equiv="pragma" content="no-cache">
+	<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+	<meta http-equiv="expires" content="0">
+	
+    <meta name="apple-mobile-web-app-capable" content="yes">
+	
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+	
+    <meta name="format-detection" content="email=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>账单</title>
+	
+	
+	
+<link href="../../css/main.css?2dc778728ee84bac933a" rel="stylesheet"><script type="text/javascript" src="../../js/app-base.js?713438468053937"></script></head>
+<body>
+	<div id="app">
+		<div class="loading" v-show="isloading"></div> 
+      	<div v-show="!isloading" style="display:none;">
+	   	  	<div class="topRouter">
+				
+				<div class="billHeader">	    	
+				    <div class="billItem clearfix" :class="{'special':special == false}">
+						<p>
+				   			<a href="#" real-path="/account/html/shopping/index.html" :class="{'active':ind ==0}">
+								<span>购物账单</span>
+							</a>
+						</p>
+						<p>		  
+				   			<a :href="baseurl+'/account/html/borrow/index.html'" real-path="/account/html/borrow/index.html" @click="changeClass(1)" :class="{'active':ind ==1}">
+								<span>借款账单</span>
+							</a>
+						</p>
+						<p v-if="special">		  
+				   			<a :href="baseurl+'/account/html/special/index.html'" real-path="/account/html/special/index.html" @click="changeClass(2)" :class="{'active':ind ==2}">
+								<span>专项账单</span>
+							</a>
+						</p>
+				    </div>
+				</div>
+			</div>
+
+			<a :href="baseurl+'/account/html/shopping/overduebills.html'" v-if="Boolean(Number(historyData))">
+				<div class="historybill clearfix">
+	               <span>历史逾期待还</span>
+	               <span>{{historyData}}元</span>
+	               <span class="arrow_his"></span>            
+				</div>
+	        </a>
+			
+			<div class="shopContent">
+	            <p class="repaydate" v-if="!(currentdata.repayed && Boolean(Number(currentdata.billAmt)))"><span>本期剩余待还(</span><span>{{currentdata.repayLastDate}}</span><span>为最迟还款日)</span></p>
+	            <p class="repaydate" v-if="currentdata.repayed && Boolean(Number(currentdata.billAmt))">本期剩余待还(已全部还清)</p>
+	            <a class="currentdata" :href="baseurl+'/account/html/shopping/bill.html?yearmonth=' + currentdata.month" v-if="!(currentdata.repayed && Boolean(Number(currentdata.billAmt)))">
+	            	<p :class="{'isover':currentdata.overdue}">{{currentdata.repayAmt | amount}}</p>
+	            </a>
+	            <a :href="baseurl+'/account/html/shopping/bill.html?yearmonth=' + currentdata.month" v-if="currentdata.repayed && Boolean(Number(currentdata.billAmt))">
+	            	<div class="bg"></div> 
+	             </a> 
+				<ul class="amount clearfix">
+	                	<li><span class="amountData">{{currentdata.billAmt | amount}}</span><span class="amountWords">账单总额(元)</span></li>	
+	                	<li><span class="amountData" :class="{'isover':currentdata.overdue}">{{currentdata.minRepayAmt | amount}}</span><span class="amountWords">剩余最低待还(元)</span></li>
+	                	<li><span class="amountData">{{currentdata.repayedAmt | amount}}</span><span class="amountWords">已还金额(元)</span></li>
+	            </ul> 
+	            <div class="clear"></div>
+	            <div class="giveBtn" :class="{'periodbtndShow':Boolean(Number(installment.hasBtn))}">
+					<a href="javascript:void(0)" class="periodbtn periodbtndised" v-if="(currentdata.repayed && Boolean(Number(currentdata.billAmt))) || Number(currentdata.billAmt) == 0">我要分期<i class="hot"></i></a>
+					<a href="javascript:void(0)" class="periodbtn" @click="periodBtn" v-else>我要分期<i class="hot"></i></a>
+	              	<div class="giveBtn_words" v-if="huanFlag">立即还款</div>
+	              	<a href="javascript:void(0)" @click="quickrepay" v-if="!huanFlag&&!Boolean(Number(historyData))">
+	                	<div class="giveBtn_words btnAtive">立即还款</div>
+	              	</a>
+	              	<div class="giveBtn_words btnAtive" @click="showpop" v-if="!huanFlag&&Boolean(Number(historyData))">立即还款</div>
+	            </div>
+	        </div>
+	    
+			<div class="shopFooter" :class="{'hasBorder':menuBar == true  }">
+	            <div class="billFuture">
+					<p class="nextword">下期未出账单({{nextData.billDate}}为出账单日)</p>
+					<a :href="baseurl+'/account/html/shopping/bill.html?yearmonth=' + nextData.month">
+						<p class="nextbill">{{nextData.amt | amount}}</p>             
+						<span class="arrow1"></span>
+					</a>
+	            </div>
+	            <div class="billHistory">
+					<a :href="baseurl+'/account/html/shopping/historybills.html'">
+						<p>历史账单</p>
+						<span class="arrow2"></span>
+					</a>
+					<a :href="baseurl+'/account/html/shopping/refundaccts.html'">
+						<p>退款记录</p>
+						<span class="arrow3"></span>
+					</a>
+	            </div>
+	        </div>
+	      
+			<div class="dialog" v-if="hisOverdueFlag || curOverdueFlag">
+	            <div class="dialog_shadow"></div>  
+	            <div class="dialog_content" v-if="hisOverdueFlag">
+	                <h3>历史逾期账单</h3>
+	                <p>您的{{months_string}}<a v-if="months?months.length>3:''">等一共{{months?months.length:''}}个月</a>账单已经逾期很久了,逾期金额为<span>{{historyData | amount}}</span>
+	                   元,请立即还款,珍惜个人信用,如想查看详情,请至历史逾期待还账单查看。</p>
+	                <div class="dialog_footer">
+						<span @click="hisOverdueFlag=!hisOverdueFlag" class="span close">我知道了</span>
+						<a href="javascript:void(0)" class="span payoff" @click="hisquickrepay">立即还款</a>
+	                </div>
+	            </div>
+	            
+	            
+	            
+	            <div class="dialog_content" v-if="curOverdueFlag">
+	                <h3>本期账单已逾期</h3>
+	                <p>您本期账单已逾期<span>{{currentdata.repayAmt | amount}}</span>元,请尽快还款,具体见立即还款页。</p>
+	                <div class="dialog_footer">
+	                    <span @click="curOverdueFlag =!curOverdueFlag" class="span close">我知道了</span>
+	                    <a href="javascript:void(0)" class="span payoff" @click="quickrepay">立即还款</a>
+	                </div>
+	            </div>
+	        </div>
+			<compmodal v-if="flagPop" @close-modal="closeWin" :data="popWindowData"></compmodal>
+			
+	        <div class="z-container">
+				<footer v-if="menuBar" class="clearfix">
+					<div v-for="(t,idx) in footList">
+						<a :href="t.path" :class="{'actived':footer_ind == idx}" @click="changeClassed(idx)">
+							<p></p>
+							<span>{{t.txt}}</span>
+						</a>
+					</div>
+				</footer>
+			</div>
+		</div>
+	</div>	
+	
+	<script type="text/javascript">
+	//防止js文件缓存下来
+	var now=new Date();
+	var number = now.getYear().toString()+now.getMonth().toString()+now.getDate().toString()+now.getHours().toString()+now.getMinutes().toString()+now.getSeconds().toString();
+	document.write('<scr'+'ipt language="javascript" type="text/javascript" src="../../js/shopping/index.js?'+number+'"></scr'+'ipt>');
+	</script>
+</body>
+</html>

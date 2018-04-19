@@ -1,0 +1,220 @@
+<!DOCTYPE HTML>
+<html lang="zh-cn">
+<head>
+   
+   <meta http-equiv="x-dns-prefetch-control" content="on">
+   <link rel="dns-prefetch" href="http://resjrprd.suning.com">
+   
+   <meta charset="UTF-8">
+   <meta http-equiv="pragma" content="no-cache">
+   <meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+   <meta http-equiv="expires" content="0">
+   
+   <meta name="apple-mobile-web-app-capable" content="yes">
+   
+   <meta name="apple-mobile-web-app-status-bar-style" content="black">
+   
+   <meta name="format-detection" content="email=no">
+   <meta name="format-detection" content="telephone=no">
+   <title>账单</title>
+   
+   
+   
+<link href="../../css/main.css?2dc778728ee84bac933a" rel="stylesheet"><script type="text/javascript" src="../../js/app-base.js?9780602236278355"></script></head>
+<body>
+<div id="app">
+   <div class="loading" v-show="isloading"></div>
+   <div v-show="!isloading" style="display:none;">
+<div>
+   <div class="topRouter">
+      <div class="billHeader">
+         <div class="billItem clearfix">
+            <p>
+               <a :href="baseurl+'/account/html/shopping/index.html'" real-path="/account/html/shopping/index.html">
+                  <span>购物账单</span>
+               </a>
+            </p>
+            <p>
+               <a :href="baseurl+'/account/html/borrow/index.html'" real-path="/account/html/borrow/index.html">
+                  <span>借款账单</span>
+               </a>
+            </p>
+            <p v-if="special">
+               <a href="#" real-path="/account/html/special/index.html" class="active">
+                  <span>专项账单</span>
+               </a>
+            </p>
+         </div>
+      </div>
+   </div>
+
+   <div class="bigbox">
+      <div class="nodata" v-show="flag">
+         <span class="kongimg"></span>
+         <div class="updatadata">无待还记录</div>
+      </div>
+      <div class="touchscroll" v-show="!flag">
+         
+         <div class="paymoneyarea">
+            <p class="p1">近期待还总额</p>
+            <p class="p2">{{repayAmt|amount}}</p>
+         </div>
+         <div class="paymoneylist mb0">
+            <a v-for="(list,index) in lists" :class="[list.currentRepayInfo.supportRepayFlag ? 'kehuan' : 'bukehuan','celllist']" @click="queryBillDetail(list.dealRefNo,'special')">
+               <div class="leftlist">
+                  <div class="title">{{list.currentRepayInfo.repayAmt | amount}}</div>
+                  <div class="titletip">{{list.txnDesc}}</div>
+               </div>
+               <div class="rightlist">
+                  <div class="moeny" :class="{error:Number(list.currentRepayInfo.overdueDays) < 0}">{{list.currentRepayInfo.overdueDays | formatDay}}</div>
+                  <div class="fqnum">{{list.repayLoanPeriodCount}}</div>
+               </div>
+            </a>
+         </div>
+      </div>
+      <a class="viewhistory" :href="baseurl+'/account/html/special/historyaccts.html'">查看历史专项贷款记录</a>
+   </div>
+      <compmodal v-if="flagPop" @close-modal="closeWin" :data="popWindowData"></compmodal>
+   </div>
+   </div>
+   
+   <div class="z-container" v-if="hasMenuBar">
+      <footer v-if="menuBar" class="clearfix">
+         <div v-for="(t,idx) in footList">
+            <a :href="t.path" :class="{'actived':footer_ind == idx}" @click="changeClassed(idx)">
+               <p></p>
+               <span>{{t.txt}}</span>
+            </a>
+         </div>
+      </footer>
+   </div>
+</div>
+<script type="text/javascript">
+    Vue.filter('formatDay', function(data) {
+        if(Number(data)<0){
+            return '逾期'+Math.abs(Number(data))+'天';
+        }else{
+            return '剩余'+Math.abs(Number(data))+'天';
+        }
+    });
+    new Vue({
+        el: '#app',
+        data: {
+            /***** url *****/
+            baseurl: config.domain,
+            /*** 底部菜单 ***/
+            hasMenuBar: false,
+            special:true,
+            lists: [],
+            repayAmt: 0.00,
+            flag: false,
+            // ****************弹窗(公用)*****************
+            //弹出框数据
+            popWindowData : {
+                title: '消息提示',
+                msg: '<p style="text-align:center;line-height:50px;">网络异常,请稍后再试...</p>',
+                closeBtn : '知道啦~'
+            },
+            //弹出框初始化显示
+            flagPop: false,
+
+            // ****************当请求到后端数据的状态码异常显示弹窗(公用)*****************
+            popMessage:"",
+
+            /***** 解决vue花括号提前加载 *****/
+            isloading:true,
+
+             /***** 底部footer *****/
+            footList: [
+                {txt: "首页", path: "#"},
+	            {txt: "借款", path: "#"},
+	            {txt: "账单", path: "#"},
+	            {txt: "发现", path: "#"},
+	            {txt: "我的", path: "#"}
+            ],
+              menuBar: true,
+              footer_ind:2
+        },
+        methods:{
+            //隐藏弹出框
+            closeWin: function() {
+                this.flagPop = false;
+            },
+            //打开弹出框
+            showpopwindow : function () {
+                this.flagPop = true;
+            },
+            queryBillDetail:function(dealRefNo, prodId){
+                var url = "";
+                // 任性借随借随还
+                if(prodId == "special"){
+                    url = this.baseurl+'/account/html/borrow/acct.html?dealRefNo=' + dealRefNo + '&rand=' + Math.random()+ '&prodId=' + prodId;
+                }
+                window.location.href=url;
+            }
+        },
+        components:{
+            'compmodal':compModal
+        },
+        mounted:function(){
+        	var that = this;
+            // 参数获取
+            var dataParams = {
+                token: (config.querys().token ? encodeURIComponent(config.querys().token) : ""),
+                pageIndex: config.querys().pageIndex || '',
+                random: Math.random()
+            };
+            //2.根据token,获取数据
+            this.$http.get(config.domain + config.urls.bill.special.index, {params:dataParams}).then(function(resp){
+            	this.isloading = false;
+                var jsoninnerObj = resp.body;
+                var dat = jsoninnerObj.data;
+                var menuInfo = jsoninnerObj.data;
+                if(dat && dat.hasMenuBar){
+                    //首页
+                    that.footList[0].path = menuInfo.menbarShopping;
+                    //借款
+                    that.footList[1].path = menuInfo.menbarDarw;
+                    // 账单
+                    that.footList[2].path = menuInfo.menbarBill;
+                    //发现
+                    that.footList[3].path = menuInfo.menbarFind;
+                    // 我的
+                    that.footList[4].path = menuInfo.menbarMine;
+                }
+                if(jsoninnerObj.code=="0000" && jsoninnerObj.data){
+                    //有数据
+                    this.isloading = false;
+                    var dat = jsoninnerObj.data;
+                    //底部菜单
+                    this.hasMenuBar = dat.hasMenuBar;
+                    
+                    if(dat.bills.length==0){
+                        //无数据
+                        this.flag = true;
+                    }else{
+                        //有数据
+                        this.lists = dat.bills || [];
+                        this.repayAmt = dat.repayAmt || 0.00;
+                    }
+                }else {
+                    this.isloading = false;
+                    this.flagPop = true;
+                    this.popWindowData.msg ='<p style="text-align:center;line-height:50px;">'+(jsoninnerObj.msg || '数据异常，请稍后再试...')+'</p>';
+                }
+            },function(err){
+                // 当请求不到后端数据,则会弹窗提示网络异常
+                this.flagPop = true;
+                this.isloading = false;
+            });
+        },
+        updated:function(){
+            $(".bukehuan").each(function(){
+                $(this).attr("style","border-top:10px solid #eee");
+                return false;
+            })
+        }
+    })
+</script>
+</body>
+</html>

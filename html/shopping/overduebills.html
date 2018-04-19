@@ -1,0 +1,77 @@
+<!DOCTYPE HTML>
+<html lang="zh-cn">
+<head>
+	
+    <meta http-equiv="x-dns-prefetch-control" content="on">
+    <link rel="dns-prefetch" href="http://resjrprd.suning.com">
+	
+    <meta charset="UTF-8">
+    <meta http-equiv="pragma" content="no-cache">
+	<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+	<meta http-equiv="expires" content="0">
+	
+    <meta name="apple-mobile-web-app-capable" content="yes">
+	
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+	
+    <meta name="format-detection" content="email=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>逾期账单</title>
+	
+	
+		
+<link href="../../css/main.css?2dc778728ee84bac933a" rel="stylesheet"><script type="text/javascript" src="../../js/app-base.js?08182807802222669"></script></head>
+<body>
+	<div id="app">
+		<div class="loading" v-show="isloading"></div>
+		<div v-show="!isloading" style="display:none;">
+			<div class="bigbox">
+				
+				<div class="nodata" v-if="noDataFlag">
+					<span class="kongimg"></span>
+					<div class="updatadata">无历史逾期待还</div>
+				</div>
+
+				
+				<div v-infinite-scroll="loadMore" infinite-scroll-disabled="!loadOver && loading" infinite-scroll-distance="10" class="paymoneylist">
+					<div v-for="(item, index) in list" class="yearcell">
+						<div class="huizong">
+							<span>{{item.year}}</span>
+						</div>
+						<a v-for="(bill, idx) in item.bills" :href="baseurl+'/account/html/shopping/bill.html?yearmonth=' + item.year + bill.month+'&source=idx_overduehis'" class="celllist">
+							
+							<div class="leftlist">
+								<p class="title">{{bill.month}}月账单</p>
+								<p class="titletip">{{bill.startDate}}-{{bill.endDate}}</p>
+							</div>
+							
+							<div class="rightlist">
+								<p class="moeny">{{bill.amt | amount}}</p>
+								<p class="fqnum" :class="{error: bill.status == 2}">
+									{{(bill.status == '0') ? '已还清' : ((bill.status=='1') ? '未还清' : ((bill.status == 2) ? '已逾期' : ''))}}
+								</p>
+							</div>
+						</a>
+					</div>
+
+					<div class="loading" v-show="!loadOver && loading">
+						<p><i></i></p>
+					</div>
+
+						<a v-if="!noDataFlag" href="#" class="quickPayBtn" @click="quickrepay"><i>逾期待还{{amt | amount}}元</i><em>立即还款</em></a>
+					</div>
+				</div>
+			</div>
+			
+			<compmodal v-if="flagPop" @close-modal="closeWin" :data="popWindowData"></compmodal>
+		</div>
+		
+	
+	<script type="text/javascript">
+		//防止js文件缓存下来
+		var now=new Date();
+		var number = now.getYear().toString()+now.getMonth().toString()+now.getDate().toString()+now.getHours().toString()+now.getMinutes().toString()+now.getSeconds().toString();
+		document.write('<scr'+'ipt language="javascript" type="text/javascript" src="../../js/shopping/overduebills.js?'+number+'"></scr'+'ipt>');
+	</script>
+</body>
+</html>

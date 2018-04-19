@@ -1,0 +1,164 @@
+<!DOCTYPE HTML>
+<html lang="zh-cn">
+<head>
+	
+	<meta http-equiv="x-dns-prefetch-control" content="on">
+	<link rel="dns-prefetch" href="http://resjrprd.suning.com">
+	
+	<meta charset="UTF-8"> 
+	<meta http-equiv="pragma" content="no-cache">
+	<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+	<meta http-equiv="expires" content="0">
+	
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	
+	<meta name="apple-mobile-web-app-status-bar-style" content="black">
+	
+	<meta name="format-detection" content="email=no">
+	<meta name="format-detection" content="telephone=no">
+	<title>详情</title>
+	
+
+
+
+
+	
+	
+<link href="../../css/main.css?2dc778728ee84bac922b" rel="stylesheet"><script type="text/javascript" src="../../js/app-base.js?1619540387764573"></script></head>
+<body>
+	<div id="appDetail">
+		<div class="loading" v-show="isloading"></div>          
+		<div v-show="!isloading" style="display:none;">
+			<div class="info-area" style="background:transparent;">
+			
+				<div class="money-area">	
+					<div class="icon-paid" v-if="Data.status==0 && Data.status != ''"><div class="payClear"></div></div>
+					<div class="icon-refund" v-if="Data.status==1"><div class="payRefund"></div></div>  				
+					<p>{{title}}</p>
+					<p>{{moneyNumber | amount}}</p>								
+				</div>
+				
+				<div class="text-list">
+					<div class="text-item clearfix">
+						<span class="info-left">{{textItemlist[0]}}</span>
+						<div class="info-right">{{Data.remark}}</div>
+					</div>
+					<div class="text-item clearfix">
+						<span class="info-left">{{textItemlist[1]}}</span>
+						<div class="info-right">{{Data.time}}</div>
+					</div>
+					<div class="text-item clearfix">
+						<span class="info-left">{{textItemlist[2]}}</span>
+						<div class="info-right">{{Data.periodCount}}</div>
+					</div>
+					
+					<div class="text-item clearfix" v-if="Data.refundAmt!=0 && Data.status!=1">
+						<span class="info-left">{{textItemlist[4]}}</span>
+						<div class="info-right">{{Data.refundAmt | amount }}元</div>
+					</div>
+					
+					<div class="text-item clearfix">
+						<span class="info-left">{{textItemlist[3]}}</span>
+						<div class="info-right">{{Data.totalFee | amount }}元</div>
+					</div>
+					
+					<div class="text-item clearfix">
+						<span class="info-left">{{textItemlist[5]}}</span>
+						<div class="info-right">{{Data.no}}</div>
+					</div>
+				</div>  
+				<div class="split-line-long"></div> 
+				<div class="iou-record-area">
+                    <a :href="baseurl+'/account/html/common/receipt.html?dealRefNo=' + Data.no" v-if="Data.haveDoc">
+						<div class="haveicon-item clearfix">
+							<div class="title">{{textpay}}</div>
+							<div class="arrow"><span class="iconright"></span></div>
+						</div>
+                    </a>
+					<a :href="baseurl+'/account/html/common/repayedrecord.html?dealRefNo=' + Data.no+'&productCode='+ Data.productCode">
+						<div class="haveicon-item clearfix">
+							<div class="title">{{textrecord}}</div>
+							<div class="arrow"><span class="iconright"></span></div>
+						</div>
+					</a>
+				</div>
+				
+				<div class="bill-detail-list-area">
+                    <div class="haveicon-item payed-process" v-for="(item,idx) in periodList" key="{idx}">
+                         <div class="direct payed-direct">
+							<div class="circle" v-if="item.isCurrent==0">{{item.index}}</div>
+                            <div class="circle check" :class="{'checked':item.status==2}" v-if="item.isCurrent==1"></div>
+                        </div>
+						<template v-if="Boolean(Number(item.isPeriod))">
+							
+							<div class="title" :class="{'color':item.status==2,'color_gray':item.status==0}">
+								{{item.amt | amount}}元
+								<template v-if="item.repayedAmt!=item.amt">
+									<span v-if="Boolean(Number(item.repayedAmt))">
+										(已还{{item.repayedAmt | amount}}元)</span>
+									<span v-else>
+										<template v-if="Boolean(Number(item.handleFee))">
+											(含手续费{{item.handleFee | amount}}元)
+										</template>
+									</span>
+								</template>
+							</div>
+						</template>
+						<template v-else>
+							
+							<div class="title" :class="{'color':item.status==2,'color_gray':item.status==0}">
+								{{item.amt | amount}}元<span v-if="Boolean(Number(item.repayedAmt)) && item.repayedAmt!=item.amt">(已还{{item.repayedAmt | amount}}元)</span>
+							</div>
+						</template>
+						<div class="right" v-if="item.status==3">{{item.repayDate.replace(/\//g,'-')}}</div>
+
+						<div class="right" :class="{'color_gray':item.status==0}" v-if="item.status==0">{{item.repayDate}}</div>
+
+						<div class="right" v-if="item.status==1">{{item.repayDate.replace(/\//g,'-')}}</div>
+
+						<div class="right" :class="{'color':item.status==2}" v-if="item.status==2">{{item.repayDate}}</div>
+                    </div>
+				</div>
+				<p class="acctRemark" v-if="!(Data.status == '0' && Data.status != '') && !(Data.status == '1' && Data.status != '')">{{remark}}</p>
+				<div class="button-1" v-if="Data.canClear==1" @click="repayAllBox">
+				
+                    <div class="title"><a href="javascript:void(0)">清偿全部剩余</a></div>
+				</div>
+				
+				<div class="dialog" v-if="repayAllFlag && Data.clearQueryStatus == 'T' ">
+		            <div class="dialog_shadow"></div>   
+		            <div class="dialog_content">
+		                <h3>提前清偿说明</h3>
+		                <p>清偿总计<span>{{Data.clearAmt | amount}}</span>元(含清偿费为<span>{{Data.clearFee | amount}}</span>元)
+		                	<a v-if="Boolean(Number(Data.overdueFee))">,逾期违约金<span>{{Data.overdueFee | amount}}</span>元</a>
+		                	<a v-if="Boolean(Number(Data.handleFee)) && Data.interestFee <= 0">,手续费<span>{{Data.handleFee | amount}}</span>元</a>
+		                	<a v-if="Boolean(Number(Data.interestFee)) || Data.handleFee == 0 ">,利息<span>{{Data.interestFee | amount}}</span>元</a>。
+		                	提交后，处理预计需要30分钟，您确定需要提前清偿吗？
+		                </p>
+		                <div class="dialog_footer">
+							<span @click="repayAllFlag=!repayAllFlag" class="span close">再想想</span>
+							<a href="javascript:void(0)" @click="quickrepayAll" class="span payoff">立即还清</a>
+		                </div>
+		            </div>
+	       	    </div>
+
+				<div class="footer_position" v-if="Data.canRepay==1">
+				
+					<div class="footer clearfix" @click="quickrepay">
+						<span>本期待还{{Data.repayAmt | amount}}元</span><span><a href="javascript:void(0)">立即还款</a></span>
+					</div>
+				</div>
+				
+				<compmodal v-if="flagPop" @close-modal="closeWin" :data="popWindowData"></compmodal>
+			</div> 
+		</div>   
+	</div>
+	
+	<script type="text/javascript">
+		//防止js文件缓存下来
+		var now=new Date();
+		var number = now.getYear().toString()+now.getMonth().toString()+now.getDate().toString()+now.getHours().toString()+now.getMinutes().toString()+now.getSeconds().toString();
+		document.write('<scr'+'ipt language="javascript" type="text/javascript" src="../../js/shopping/acct.js?'+number+'"></scr'+'ipt>');
+	</script>
+</body>
+</html>

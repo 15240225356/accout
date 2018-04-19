@@ -1,0 +1,167 @@
+<!DOCTYPE HTML>
+<html lang="zh-cn">
+<head>
+   <meta http-equiv="x-dns-prefetch-control" content="on">
+   <link rel="dns-prefetch" href="http://resjrprd.suning.com">
+
+   <meta charset="UTF-8">
+   <meta http-equiv="pragma" content="no-cache">
+   <meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+   <meta http-equiv="expires" content="0">
+
+
+   <meta name="apple-mobile-web-app-capable" content="yes">
+
+   <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+   <meta name="format-detection" content="email=no">
+   <meta name="format-detection" content="telephone=no">
+   <title>借款记录</title>
+   
+   
+   
+<link href="../../css/main.css?2dc778728ee84bac933a" rel="stylesheet"><script type="text/javascript" src="../../js/app-base.js?6871778799686581"></script></head>
+<body>
+<div id="app">
+   <div class="loading" v-show="isloading"></div>
+   <div v-show="!isloading" style="display:none">
+      <div class="bigbox">
+         <div class="nodata" v-if="noDataFlag">
+            <span class="kongimg"></span>
+            <div class="updatadata">无历史借款记录</div>
+         </div>
+         <div class="paymoneylist mb0" v-infinite-scroll="loadMore" infinite-scroll-disabled="!loadOver && loading" infinite-scroll-distance="10">
+            <a v-for="(list,index) in lists" class="celllist" @click="queryBillDetail(list.dealRefNo,'cash',list.productCode)">
+               <div class="leftlist">
+                  <div class="title">{{list.totalLoanPrincipalAmt | amount}}</div>
+                  <div class="titletip">
+                     <template v-if="list.productCode == 'RXFSJSH'">任性借-随借随还</template>
+                     <template v-else-if="list.productCode == 'RXFXJ01'">任性借-每月等额</template>
+                     <template v-else-if="list.productCode == 'RXFXFHB01'">任性借-先费后本</template>
+                  </div>
+               </div>
+               <div class="rightlist">
+                  <div class="moeny">
+                     <template v-if="list.repayStatus == 2">已还清</template>
+                  </div>
+                  <div class="fqnum">{{list.cleanDateFormat}}</div>
+               </div>
+            </a>
+         </div>
+         <div v-show="!loadOver && loading" style="padding: 10px 0;">加载中...</div>
+         <div v-show="loadOver" class="nomoredata">没有更多数据了！</div>
+      </div>
+   </div>
+   <compmodal v-if="flagPop" @close-modal="closeWin" :data="popWindowData"></compmodal>
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#app',
+        data: {
+            /***** url *****/
+            baseurl: config.domain,
+
+            lists: [],
+            // ****************弹窗(公用)*****************
+            //弹出框数据
+            popWindowData : {
+                title: '消息提示',
+                msg: '<p style="text-align:center;line-height:50px;">网络异常,请稍后再试...</p>',
+                closeBtn : '知道啦~'
+            },
+            //弹出框初始化显示
+            flagPop: false,
+
+            // ****************当请求到后端数据的状态码异常显示弹窗(公用)*****************
+            popMessage:"",
+
+            /***** 解决vue花括号提前加载 *****/
+            isloading:true,
+            noDataFlag: false,
+
+            /***** 滑动加载控制 *****/
+            loading: true, // 是否正在加载
+            loadOver: false, // 是否所有数据加载完成
+
+            /***** 页码 *****/
+            page: 1
+        },
+        methods:{
+            //隐藏弹出框
+            closeWin: function() {
+                this.flagPop = false;
+            },
+            //打开弹出框
+            showpopwindow : function () {
+                this.flagPop = true;
+            },
+            /***** 分页 *****/
+            loadMore: function() {
+                // 没有更多的数据了 不发送请求了
+                if (this.loadOver) {
+                    return;
+                }
+                this.loading = true; // 分页开始查询
+                // 参数获取
+                var dataParams = {
+                    token: (config.querys().token ? encodeURIComponent(config.querys().token) : ""),
+                    channelType: (config.querys().channelType ? encodeURIComponent(config.querys().channelType) : ""),
+                    pageIndex : this.page,
+                    random: Math.random()
+                };
+                var that = this;
+                this.$http.get(config.domain + config.urls.bill.borrow.borrowhistoryrecord, {params: dataParams}).then(
+                    function(response) {
+                        var jsonObj = JSON.parse(response.bodyText);
+                        if (jsonObj.code=="0000" && jsonObj.data) {
+                            var dat = jsonObj.data;
+                            if (dat.borrows && dat.borrows.length > 0) {
+                                for (var i = 0; i < dat.borrows.length; i++) {
+                                    that.lists.push(dat.borrows[i]);
+                                }
+                            } else {
+                                that.loadOver = true; // 没有更多的数据了
+                            }
+                        } else {
+                            that.flagPop = true; // 网络异常弹窗
+                            that.popWindowData.msg ='<p style="text-align:center;line-height:50px;">'+(jsonObj.msg || "数据异常，请稍后再试...")+'</p>';
+                        }
+                        that.page ++;
+                        that.loading = false; // 分页结束查询
+                        that.isloading = false; // 整个页面的加载
+                        that.noDataCompute();
+                    },
+                    function(err) {
+                        that.flagPop = true; // 网络异常弹窗
+                        that.loading = false; // 分页结束查询
+                        that.isloading = false; // 整个页面的加载
+                    }
+                );
+            },
+            /***** 无数据显示控制 *****/
+            noDataCompute: function() {
+                this.noDataFlag = !this.lists || this.lists.length < 1;
+                if(this.noDataFlag){
+                    this.loadOver = false;
+                }
+            },
+            queryBillDetail:function(dealRefNo, prodId, type, repayMinAmt){
+                var url = "";
+                // 任性借随借随还
+
+                if(type=="RXFSJSH"){
+                    url = this.baseurl+'/account/html/borrow/accthistorysjsh.html?dealRefNo=' + dealRefNo + '&rand=' + Math.random();
+                }else{
+                    url = this.baseurl+'/account/html/borrow/accthistory.html?dealRefNo=' + dealRefNo + '&rand=' + Math.random();
+                }
+
+                window.location.href=url;
+            }
+        },
+        components:{
+            'compmodal':compModal
+        }
+    })
+</script>
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE HTML>
+<html lang="zh-cn">
+<head>
+	
+    <meta http-equiv="x-dns-prefetch-control" content="on">
+    <link rel="dns-prefetch" href="http://resjrprd.suning.com">
+	 
+    <meta charset="UTF-8">	 
+    <meta http-equiv="pragma" content="no-cache">
+	<meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+	<meta http-equiv="expires" content="0">
+	
+    <meta name="apple-mobile-web-app-capable" content="yes">
+	
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+	
+    <meta name="format-detection" content="email=no">
+    <meta name="format-detection" content="telephone=no">
+    <title>账单分期</title>
+	
+	
+	
+	
+	<script type="text/javascript" src="../../js/jsbn.js"></script>
+	<script type="text/javascript" src="../../js/prng4.js"></script>
+	<script type="text/javascript" src="../../js/rng.js"></script>
+	<script type="text/javascript" src="../../js/rsa.js"></script>
+<link href="../../css/main.css?600c3c757e0588dbe2ad" rel="stylesheet"><script type="text/javascript" src="../../js/app-base.js?2643915778025985"></script></head>
+<body>
+	<div id="app">
+		<div class="loading" v-show="isloading"></div> 
+      	<div v-show="!isloading" style="display:none;">
+		   	<section class="bill-fenqi">
+		   		
+				<div class="bill-info-area">
+					<div class="tip">可分期金额(元)</div>
+			        <div class="money">{{periodAmt|amount}}</div>
+			        <div class="order" @click="popWindow">可分期订单数{{periodNum}}笔</div>
+			        <div id="description" class="description" @click="rulerWindow"></div>
+				</div>		
+				<div class="mod_title_new">
+					账单分期条件：须为购物不分期贷款；单笔贷款剩余本金大于{{minSingle}}（含）元；分期总额须大于{{minState}}（含）元 ；账单分期后退货会产生退款手续费。
+					
+				</div>
+				<div class="period-list">
+			   		<div class="choose-itemed checked-process" v-for="(item,idx) in repayList" key="{idx}">
+				    	<div class="choose-item-period clearfix" @click="periodShow(idx,item.period)" :data-id="item.period">
+			                <div class="direct">
+			                    <div class="circle" :class="{'checked':showsContent[idx].isActive}"></div>
+			                </div>
+			                <div class="first_new">
+					        	<div class="lower-left-new">可分{{item?item.period:0}}期<span class="multi">×</span><span>每期{{item && item.periods?item.periods[0].totalAmt:0|amount}}元</span></div>
+					        </div>
+				       </div>
+				       <div class="periodList" v-if="showsContent[idx].isActive">
+					        <div class="period-list-item-new">
+					        	<div class="period-list-detail" v-for="(itm,index) in item.periods" key="{idx}">
+					        		<span class="list-detail-left">第{{index+1}}期 </span> 
+					        		<span class="list-detail-right">{{itm.billDate}}还{{itm.totalAmt|amount}}元(含手续费{{itm.handleFee|amount}}元)</span>
+					        	</div>				    				        	
+					        </div>
+				        </div>
+            		</div>
+				</div>
+				
+								
+				<div class="protocol clearfix" @click="openProtocol" v-if="description1||description2||description3">
+					<div :class="{'activeCircle':activeCircle == true}"></div>
+					<div> {{description1}}<a href="#">{{description2}}</a>{{description3}}</div>
+				</div>
+				<bottompop :data="bottomProData" @close-bpop="closePro">
+					<ul class="ulobj" v-for="(item,idx) in resultData" key="{idx}">
+						<li @click="openProWin(idx,item.version,item.protocolTitle)" :data-proversion="item.version" :data-protitle="item.protocolTitle">{{item.protocolTitle}}</li>
+						
+					</ul>
+					<div class="agree-btn" @click="agreeProtocol">我已阅读并同意</div>
+				</bottompop>
+				
+				<compmodal v-if="proMidFlag" @close-modal="closeProDetail" :data="ProWindowData"></compmodal>	
+				<div class="free-box"></div>									
+				<div class="bottom-menu-new">
+					<div class="bottom-menu-words" id="install" :class="{'insBtn':(showsContent[0].isActive||showsContent[1].isActive||showsContent[2].isActive) && activeCircle}" onclick="_alertPwd">立即分期</div>
+				</div>
+				
+				<div class="period-layer" v-if="periodList">
+					<div class="period-shadow"></div>
+					<div class="period-order">
+						<div class="period-order-title">
+							<div class="period-order-title-words">
+								分期订单
+								<div class="close-button" @click="periodList=!periodList"></div>
+							</div>																								
+						</div>
+						<div class="period-order-content">
+							<div class="period-order-content-item clearfix" v-for="(item,idx) in itemList" key="{idx}">
+								<div class="period-order-remark">{{item.remark}}</div>
+								<div class="period-order-amt">{{item.amt|amount}}</div>									
+							</div>
+						</div>
+					</div>
+				</div>
+				
+				<div class="bill-ruler-layer" v-if="rulerDescri">
+					<div class="bill-ruler-shadow">
+						<div class="bill-ruler">
+							<h1>账单分期说明</h1>
+							<div class="bill-ruler-content">
+								<p>账单分期是针对您当期购物账单中购物不分期金额提供的分期服务。</p>
+								<p>若您购物账单中的购物不分期金额大于600元，就可以申请账单分期服务。单笔贷款余额小于20元，则该笔贷款无法享受账单分期服务。</p>
+								<p>您在每月的1号至13号时间内，均可使用账单分期服务。</p>
+								<p>若您使用账单分期服务后，发生退货（以商户成功受理退货时间为准），可能会产生手续费，具体收费标准，请参照任性付APP/易付宝帮助中心。</p>
+								<p>欢迎您使用账单分期服务，并提出您的宝贵意见。</p>
+							</div>
+							<div class="bill-ruler-know" @click="rulerDescri=!rulerDescri">知道了</div>
+						</div>
+					</div>
+				</div>
+				
+				
+				
+				<compmodal v-if="flagPop" @close-modal="closeWin" :data="popWindowData"></compmodal>
+			</section>
+		</div>
+	</div>	
+		
+	<script type="text/javascript" src="../../js/template.min.js"></script>
+	<script type="text/javascript" src="../../js/exp.js"></script>
+	<script type="text/javascript" src="../../js/exp-newpwdInputKeyboard.js"></script>
+	<script type="text/javascript" src="../../js/shopping/period.js?version=0.1"></script>
+</body>
+</html>

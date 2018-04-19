@@ -1,0 +1,244 @@
+<!DOCTYPE HTML>
+<html lang="zh-cn">
+<head>
+   
+   <meta http-equiv="x-dns-prefetch-control" content="on">
+   <link rel="dns-prefetch" href="http://resjrprd.suning.com">
+   
+   <meta charset="UTF-8">
+   <meta http-equiv="pragma" content="no-cache">
+   <meta http-equiv="Cache-Control" content="no-store, must-revalidate">
+   <meta http-equiv="expires" content="0">
+   
+   <meta name="apple-mobile-web-app-capable" content="yes">
+   
+   <meta name="apple-mobile-web-app-status-bar-style" content="black">
+   
+   <meta name="format-detection" content="email=no">
+   <meta name="format-detection" content="telephone=no">
+   <title>账单详情</title>
+   
+   
+   
+<link href="../../css/main.css?2dc778728ee84bac922b" rel="stylesheet"><script type="text/javascript" src="../../js/app-base.js?5899930673185736"></script></head>
+<body>
+<div id="app">
+   <div class="loading" v-show="isloading"></div>
+   <div v-show="!isloading" style="display:none;">
+      <section class="content info-area">
+         <div class="have-bottom-content">
+            <div class="info-area bill-detail-info-area">
+               <div class="money-area">
+                  <div class="icon-paid"><div class="payClear"></div></div>
+                  <p>借款总额</p>
+                  <p>{{loanDetail.totalLoanPrincipalAmt | amount}}</p>
+               </div>
+               <div class="text-list bill-text-list clearfix">
+                  <div class="text-item clearfix">
+                     <span class="info-left">账单说明</span>
+                     <div class="info-right">
+                        <template v-if="loanDetail.productCode == 'RXFXJ01'">每月等额</template>
+                        <template v-else>{{loanDetail.txnDesc}}</template>
+                     </div>
+                  </div>
+                  <div class="text-item clearfix">
+                     <div class="info-left">借款时间</div>
+                     <div class="info-right">{{loanDetail.tranTime}}</div>
+                  </div>
+                  <template v-if="loanDetail.refundAmount && (Number(loanDetail.refundAmount)>0)">
+                     
+                     <div class="text-item clearfix">
+                        <div class="info-left">已退款</div>
+                        <div class="info-right">{{loanDetail.refundAmount | amount}}元</div>
+                     </div>
+                  </template>
+                  <div class="text-item clearfix">
+                     <div class="info-left">贷款状态</div>
+                     <div class="info-right">
+                        {{(loanDetail.loanStatus == 'S') ? '放款成功' : ((loanDetail.loanStatus=='F') ? '放款失败' : ((loanDetail.loanStatus == 'I') ? '放款中' : ''))}}
+                     </div>
+                  </div>
+                  <div class="text-item clearfix">
+                     <div class="info-left">分期期数</div>
+                     <div class="info-right">
+                        {{loanDetail.oriTotalLoanPeriod}}期
+                     </div>
+                  </div>
+                  <div class="text-item clearfix">
+                     <div class="info-left">总费用</div>
+                     <div class="info-right">{{loanDetail.totalFee | amount}}元
+                     </div>
+                  </div>
+                  <div class="text-item clearfix">
+                     <div class="info-left">贷款账号</div>
+                     <div class="info-right">{{loanDetail.dealRefNo}}</div>
+                  </div>
+               </div>
+            </div>
+            <div class="split-line-long"></div>
+            <div class="iou-record-area">
+               <template v-if="isHaveDoc">
+                  <a :href="baseurl+'/account/html/common/receipt.html?dealRefNo=' + loanDetail.dealRefNo">
+                     <div class="haveicon-item clearfix">
+                        <div class="title">借款借据</div>
+                        <div class="arrow"><span class="iconright"></span></div>
+                     </div>
+                  </a>
+               </template>
+               <a :href="baseurl+'/account/html/common/repayedrecord.html?dealRefNo=' + loanDetail.dealRefNo+'&productCode='+loanDetail.productCode">
+                  <div class="haveicon-item clearfix">
+                     <div class="title">还款记录</div>
+                     <div class="arrow"><span class="iconright"></span></div>
+                  </div>
+               </a>
+            </div>
+
+            <div class="bill-detail-list-area">
+               <template v-if="loanDetail.repayInfo && (String(loanDetail.repayInfo).length>0)">
+                  <template v-for="(list,index) in loanDetail.repayInfo">
+                     <div class="haveicon-item payed-process" :class="repayedClass(list.status)">
+                        <input type="hidden" class="status" :value="list.status">
+                        <div class="direct payed-direct">
+                           <div class="circle">{{index + 1}}</div>
+                        </div>
+                        <div id="repayMoney" style="display:none">{{Number(list.repayTotal)-Number(list.factTotal)-Number(list.waiveTotal)}}</div>
+                        <div class="title">{{list.repayTotal | amount}}元
+                           <template v-if="(list.status == '3' || list.status == '4') && ((Number(list.factTotal)+Number(list.waiveTotal)) > 0)">
+                              (已还{{Number(list.factTotal) + Number(list.waiveTotal) | amount}}元)
+                           </template>
+                        </div>
+                        <div class="right">
+                           <template v-if="list.status == '1'">
+                              剩余{{list.overdueDays}}天
+                           </template>
+                           <template v-else>
+                              <template v-if="list.status == '2'">
+                                 已还
+                              </template>
+                              <template v-else>
+                                 <template v-if="list.status == '3'">
+                                    未还清
+                                 </template>
+                                 <template v-else>
+                                    <template v-if="list.status == '4'">
+                                       已逾期{{list.overdueDays}}天
+                                    </template>
+                                    <template v-else>
+                                       <template v-if="list.status == '5'">
+                                          {{list.repayDate}}
+                                       </template>
+                                    </template>
+                                 </template>
+                              </template>
+                           </template>
+                        </div>
+                     </div>
+                  </template>
+               </template>
+            </div>
+         </div>
+         
+         <compmodal v-if="flagPop" @close-modal="closeWin" :data="popWindowData"></compmodal>
+      </section>
+   </div>
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#app',
+        data: {
+            /***** url *****/
+            baseurl: config.domain,
+
+            loanDetail: {},
+            isHaveDoc: true,
+            // ****************弹窗(公用)*****************
+            //弹出框数据
+            popWindowData : {
+                title: '消息提示',
+                msg: '<p style="text-align:center;line-height:50px;">网络异常,请稍后再试...</p>',
+                closeBtn : '知道啦~'
+            },
+            //弹出框初始化显示
+            flagPop: false,
+
+            /***** 解决vue花括号提前加载 *****/
+            isloading:true,
+
+            // ****************当请求到后端数据的状态码异常显示弹窗(公用)*****************
+            popMessage:""
+        },
+        methods:{
+            //隐藏弹出框
+            closeWin: function() {
+                this.flagPop = false;
+            },
+            //打开弹出框
+            showpopwindow : function () {
+                this.flagPop = true;
+            },
+            //还款列表class计算
+            repayedClass: function(status) {
+                if (status==1) {
+                    return 'notpay-process';
+                } else if (status==2) {
+                    return 'payed2-process';
+                } else if (status==3) {
+                    return 'notpay-process';
+                } else if (status==4) {
+                    return 'overdue-process';
+                } else if (status==5) {
+                    return 'disrepay';
+                }
+                return '';
+            }
+        },
+        components:{
+            'compmodal':compModal
+        },
+        mounted:function(){
+            // 参数获取
+            var dataParams = {
+                token: (config.querys().token ? encodeURIComponent(config.querys().token) : ""),
+                channelType: (config.querys().channelType ? encodeURIComponent(config.querys().channelType) : ""),
+                dealRefNo: config.querys().dealRefNo || '',
+                productType: config.querys().productType || '',
+                random: Math.random()
+            };
+            this.$http.get(config.domain + config.urls.bill.borrow.acctHistory, {params:dataParams}).then(function(resp){
+                var jsoninnerObj = resp.body;
+                if(jsoninnerObj.code=="0000" && jsoninnerObj.data){
+                    this.isloading = false;
+                    //有数据
+                    var dat = jsoninnerObj.data;
+                    this.loanDetail = dat.loanDetail || {};
+                    this.isHaveDoc = dat.isHaveDoc;
+                }else {
+                    this.isloading = false;
+                    this.flagPop = true;
+                    this.popWindowData.msg ='<p style="text-align:center;line-height:50px;">'+(jsoninnerObj.msg || '数据异常，请稍后再试...')+'</p>';
+                }
+            },function(err){
+                // 当请求不到后端数据,则会弹窗提示网络异常
+                this.flagPop = true;
+                this.isloading = false;
+            });
+        },
+        updated:function(){
+            $(function(){
+                var list = $('.bill-detail-list-area .haveicon-item');
+                list.each(function(){
+                    var status = $(this).children(".status").val();
+                    if(status == "1" || status == "3"){
+                        $(this).addClass("checked-process-notpay checked");
+                        return false;
+                    }else if(status == "4"){
+                        $(this).addClass("checked-process-overdue checked");
+                        return false;
+                    }
+                });
+            });
+        }
+    })
+</script>
+</body>
+</html>
